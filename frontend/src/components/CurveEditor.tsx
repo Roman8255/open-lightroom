@@ -4,8 +4,8 @@ import { curveLut } from "../gl/curve";
 type Pt = [number, number];
 const S = 220;
 
-export function CurveEditor({ points, onChange, onCommit }: {
-  points: Pt[]; onChange: (p: Pt[]) => void; onCommit: () => void;
+export function CurveEditor({ points, onChange, onCommit, color = "#ddd" }: {
+  points: Pt[]; onChange: (p: Pt[]) => void; onCommit: () => void; color?: string;
 }) {
   const svg = useRef<SVGSVGElement>(null);
   const [drag, setDrag] = useState<number | null>(null);
@@ -60,7 +60,7 @@ export function CurveEditor({ points, onChange, onCommit }: {
         </g>
       ))}
       <line x1="0" y1={S} x2={S} y2="0" stroke="#444" strokeDasharray="3 3" />
-      <path d={path} fill="none" stroke="#ddd" strokeWidth="1.5" />
+      <path d={path} fill="none" stroke={color} strokeWidth="1.5" />
       {points.map((p, i) => (
         <circle key={i} cx={p[0] * S} cy={(1 - p[1]) * S} r="4" fill={drag === i ? "#4fa3ff" : "#222"} stroke="#ddd" />
       ))}

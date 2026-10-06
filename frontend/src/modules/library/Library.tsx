@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { type Photo, fileUrl } from "../../api/client";
 import { ExportDialog } from "../../components/ExportDialog";
 import { Filmstrip } from "../../components/Filmstrip";
+import { CollectionsPanel, CommentsPanel, FoldersPanel, KeywordListPanel, KeywordingPanel, MetadataPanel, PublishPanel } from "../../components/LibraryPanels";
 import { Panel } from "../../components/Panel";
 import { QuickDevelop } from "../../components/QuickDevelop";
 import { FlagIcon, LABELS, LABEL_COLOR, Stars } from "../../components/Rating";
@@ -66,7 +67,7 @@ export function Library() {
   const filterBtn = (m: FilterMode, label: string) => (
     <button className={mode === m ? "text-lr-hi" : "text-lr-dim hover:text-lr-text"} onClick={() => {
       setMode(m);
-      if (m === "none") { setText(""); void lib.setFilter({ q: undefined, rating_min: undefined, flag: undefined, color_label: undefined }); }
+      if (m === "none") { setText(""); void lib.setFilter({ q: undefined, rating_min: undefined, flag: undefined, color_label: undefined, collection_id: undefined, keyword_id: undefined, folder: undefined }); }
     }}>{label}</button>
   );
 
@@ -82,7 +83,7 @@ export function Library() {
           </Panel>
           <Panel title="Catalog">
             {([
-              ["All Photographs", () => lib.setFilter({ rating_min: undefined, flag: undefined, color_label: undefined, q: undefined }), photos.length],
+              ["All Photographs", () => lib.setFilter({ rating_min: undefined, flag: undefined, color_label: undefined, q: undefined, collection_id: undefined, keyword_id: undefined, folder: undefined }), photos.length],
               ["Picked", () => lib.setFilter({ flag: 1 }), null],
               ["Rejected", () => lib.setFilter({ flag: -1 }), null],
               ["4+ Stars", () => lib.setFilter({ rating_min: 4 }), null],
@@ -92,9 +93,9 @@ export function Library() {
               </button>
             ))}
           </Panel>
-          <Panel title="Folders" defaultOpen={false}><span className="text-lr-dim">Uploads</span></Panel>
-          <Panel title="Collections" disabled />
-          <Panel title="Publish Services" disabled />
+          <FoldersPanel />
+          <CollectionsPanel />
+          <PublishPanel />
         </div>
         <div className="shrink-0 p-2 flex gap-2 border-t border-lr-border">
           <button className="lr-btn flex-1" onClick={() => fileInput.current?.click()}>Import…</button>
@@ -194,12 +195,10 @@ export function Library() {
       <aside className="w-[260px] shrink-0 bg-lr-panel border-l border-lr-border overflow-y-auto">
         <Panel title="Histogram"><ThumbHistogram photoId={active} /></Panel>
         <QuickDevelop />
-        <Panel title="Keywording" disabled />
-        <Panel title="Keyword List" disabled />
-        <Panel title="Metadata">
-          {activePhoto ? <Meta photo={activePhoto} onRate={(n) => void lib.patch(ids(), { rating: n })} /> : <span className="text-lr-dim">No photo selected</span>}
-        </Panel>
-        <Panel title="Comments" disabled />
+        <KeywordingPanel photo={activePhoto} />
+        <KeywordListPanel />
+        <MetadataPanel photo={activePhoto} onRate={(n) => void lib.patch(ids(), { rating: n })} />
+        <CommentsPanel photo={activePhoto} />
         <Panel title="Shortcuts" defaultOpen={false}>
           <div className="text-lr-dim leading-5">
             0–5 rate · P pick · X reject · U unflag · 6–9 color label · G grid · E loupe · D develop · ←→↑↓ navigate · ⌘/Ctrl+A all · Del delete
@@ -230,30 +229,6 @@ function Cell({ photo, index, size, selected, active, onClick, onOpen, onRate }:
         </span>
         <span className={photo.rating > 0 || selected ? "" : "opacity-0 group-hover:opacity-100"}><Stars value={photo.rating} onChange={onRate} size={11} /></span>
       </div>
-    </div>
-  );
-}
-
-function Meta({ photo, onRate }: { photo: Photo; onRate: (n: number) => void }) {
-  const e = photo.exif as Record<string, string | number>;
-  const fmtShutter = (v: number) => (v >= 1 ? `${v}s` : `1/${Math.round(1 / v)}s`);
-  const rows: [string, string | undefined][] = [
-    ["File Name", photo.filename],
-    ["Dimensions", `${photo.width} × ${photo.height}`],
-    ["File Size", `${(photo.size_bytes / 1048576).toFixed(1)} MB`],
-    ["Capture Time", photo.captured_at ? new Date(photo.captured_at).toLocaleString() : undefined],
-    ["Camera", [e.make, e.model].filter(Boolean).join(" ") || undefined],
-    ["Lens", e.lens as string | undefined],
-    ["Exposure", e.shutter ? `${fmtShutter(Number(e.shutter))} at f/${e.aperture ?? "–"}` : undefined],
-    ["ISO", e.iso ? String(e.iso) : undefined],
-    ["Focal Length", e.focal_length ? `${e.focal_length} mm` : undefined],
-  ];
-  return (
-    <div className="flex flex-col gap-1.5">
-      <div className="flex justify-between items-center"><span className="text-lr-dim">Rating</span><Stars value={photo.rating} onChange={onRate} size={14} /></div>
-      {rows.filter(([, v]) => v).map(([k, v]) => (
-        <div key={k} className="flex justify-between gap-2"><span className="text-lr-dim shrink-0">{k}</span><span className="text-lr-hi text-right break-all">{v}</span></div>
-      ))}
     </div>
   );
 }

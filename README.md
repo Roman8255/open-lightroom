@@ -6,14 +6,16 @@ keyboard shortcuts) so Lightroom users feel at home.
 
 **Stack:** React + TypeScript + Vite + Tailwind · WebGL2 edit pipeline · FastAPI · PostgreSQL · Alembic migrations · Docker.
 
-## Features (MVP)
-- **Library:** import (drag & drop / picker), grid & loupe, filmstrip, star ratings, pick/reject flags,
-  color labels, filtering & sorting, EXIF info, multi-select.
-- **Develop (real-time, GPU):** white balance, exposure, contrast, highlights, shadows, whites, blacks,
-  clarity, vibrance, saturation, tone curve, HSL, sharpening, vignette, grain.
+## Features
+- **Library:** import (files, drag & drop, whole folders), grid & loupe, filmstrip, ratings, flags, color labels,
+  Library Filter, Folders, **Collections**, **Keywords**, editable metadata, comments, Quick Develop, **Publish** to ZIP.
+- **Develop (real-time, GPU):** Basic (WB, tone, texture, clarity, dehaze, vibrance, saturation), tone curves (RGB + channels),
+  HSL / B&W, color grading, detail (sharpen, noise reduction), lens corrections, transform, effects, calibration.
+- **Tools:** crop & straighten, spot removal (clone/heal), red eye, **graduated / radial filters and adjustment brush** with
+  up to 4 masks, per-mask adjustments, invert, show/hide and mask overlay.
 - **Non-destructive:** originals are never modified; only edit parameters (JSON) are stored.
-- History panel with undo/redo, snapshots, copy/paste settings, built-in presets, before/after.
-- **Export** JPEG/PNG with quality and size (rendered server-side with the same pipeline).
+- History with undo/redo, snapshots, copy/paste, user + built-in presets, before/after.
+- **Export** JPEG/PNG with quality and size (the server re-renders with the same pipeline).
 - Multi-user accounts (email + password).
 
 See [docs/lightroom-feature-map.md](docs/lightroom-feature-map.md) for what is done and planned.
@@ -48,8 +50,16 @@ docker compose -f docker-compose.prod.yml -f docker-compose.local.yml up --build
 ```
 
 ## Keyboard shortcuts
-`G` grid · `E` loupe · `D` develop · `0–5` rating · `P/X/U` pick/reject/unflag · `6–9` color labels ·
-`←→` navigate · `\` before/after · `Ctrl/⌘+Z` undo · `Ctrl/⌘+Shift+Z` redo · `Ctrl/⌘+Shift+C/V` copy/paste settings.
+**Global / Library:** `G` grid · `E` loupe · `D` develop · `0–5` rating · `P/X/U` pick/reject/unflag · `6–9` color labels ·
+arrows navigate · `Ctrl/⌘+A` select all · `Del` delete
+
+**Develop tools:** `R` crop · `Q` spot removal · `Shift+Q` red eye · `M` graduated filter · `Shift+M` radial filter · `K` brush ·
+`Enter`/`Esc` finish tool · `X` (in crop) swap orientation
+
+**Masks:** `Alt+1…4` select mask 1–4 (also switches to its tool) · `[` / `]` previous / next mask (brush & spot: size) ·
+`H` show/hide selected mask · `Shift+I` invert · `O` mask overlay · `Del` delete mask/spot · hold `Alt` while painting to erase
+
+**Editing:** `\` before/after · `Ctrl/⌘+Z` undo · `Ctrl/⌘+Shift+Z` redo · `Ctrl/⌘+Shift+C/V` copy/paste settings
 
 ## Architecture
 See [docs/architecture.md](docs/architecture.md) and [docs/edit-params.md](docs/edit-params.md).

@@ -25,7 +25,11 @@ interface LibraryState {
   setModule: (m: Module) => void;
   setView: (v: ViewMode) => void;
   setThumbSize: (n: number) => void;
-  upload: (files: File[]) => Promise<void>;
+  upload: (files: File[], folder?: string) => Promise<void>;
+  /** bumps whenever collections / keywords / folders may have changed, so sidebars refetch */
+  sidebarVersion: number;
+  bumpSidebars: () => void;
+  updatePhoto: (id: number, patch: Partial<Photo>) => void;
   patch: (ids: number[], patch: { rating?: number; flag?: number; color_label?: string }) => Promise<void>;
   remove: (ids: number[]) => Promise<void>;
   markEdited: (id: number, edited: boolean) => void;
@@ -37,7 +41,7 @@ interface LibraryState {
 export const useLibrary = create<LibraryState>((set, get) => ({
   photos: [], loading: false, filter: { sort: "captured_at", order: "desc" },
   selected: new Set(), active: null, module: "library", view: "grid", thumbSize: 200,
-  uploading: null, error: null,
+  uploading: null, error: null, sidebarVersion: 0,
 
   async load() {
     set({ loading: true });
@@ -91,15 +95,19 @@ export const useLibrary = create<LibraryState>((set, get) => ({
   setThumbSize: (thumbSize) => set({ thumbSize }),
   setError: (error) => set({ error }),
 
-  async upload(files) {
+  bumpSidebars: () => set({ sidebarVersion: get().sidebarVersion + 1 }),
+  updatePhoto: (id, patch) => set({ photos: get().photos.map((p) => (p.id === id ? { ...p, ...patch } : p)) }),
+
+  async upload(files, folder) {
     const total = files.length;
     set({ uploading: { done: 0, total } });
     try {
       for (let i = 0; i < files.length; i += 4) {
-        await api.upload(files.slice(i, i + 4));
+        await api.upload(files.slice(i, i + 4), folder);
         set({ uploading: { done: Math.min(total, i + 4), total } });
       }
       await get().load();
+      get().bumpSidebars();
     } catch (e) {
       set({ error: (e as Error).message });
     } finally {
@@ -130,6 +138,7 @@ export const useLibrary = create<LibraryState>((set, get) => ({
       await Promise.all(ids.map((id) => api.deletePhoto(id)));
       set({ selected: new Set(), active: null });
       await get().load();
+      get().bumpSidebars();
     } catch (e) {
       set({ error: (e as Error).message });
     }

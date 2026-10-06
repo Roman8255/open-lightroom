@@ -1,7 +1,6 @@
-import io
 from typing import Literal
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse, Response
 from PIL import Image, UnidentifiedImageError
 from sqlalchemy import select
@@ -10,11 +9,11 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.db import get_db
 from app.core.security import get_current_user
-from app.models import EditHistory, EditSettings, Photo, User
+from app.models import CollectionPhoto, EditHistory, EditSettings, Photo, User, photo_keywords
 from app.schemas.api import PhotoOut, PhotoPatch
 from app.schemas.edit import EditOut, EditParams, ExportRequest, HistoryCreate, HistoryOut
 from app.services import images, storage
-from app.services.render import render
+from app.services.exporter import render_export
 
 router = APIRouter(prefix="/photos", tags=["photos"])
 
@@ -35,6 +34,7 @@ def _get_photo(db: Session, user: User, photo_id: int) -> Photo:
 @router.post("", response_model=list[PhotoOut], status_code=201)
 async def upload(
     files: list[UploadFile] = File(...),
+    folder: str = Form("Uploads", max_length=255),
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
@@ -50,7 +50,7 @@ async def upload(
         exif, captured = images.read_exif(raw)
         img = images.normalize(raw)
         photo = Photo(
-            user_id=user.id, filename=f.filename or "photo",
+            user_id=user.id, filename=f.filename or "photo", folder=folder.strip() or "Uploads",
             mime_type=Image.MIME.get(raw.format, "image/jpeg"), size_bytes=len(data),
             width=img.width, height=img.height, exif=exif, captured_at=captured,
         )
@@ -75,6 +75,9 @@ def list_photos(
     flag: Literal[-1, 0, 1] | None = None,
     color_label: str | None = None,
     search: str | None = Query(None, alias="q", max_length=100),
+    collection_id: int | None = None,
+    keyword_id: int | None = None,
+    folder: str | None = None,
     sort: Literal["captured_at", "created_at", "rating", "filename"] = "captured_at",
     order: Literal["asc", "desc"] = "desc",
     db: Session = Depends(get_db),
@@ -85,6 +88,12 @@ def list_photos(
         stmt = stmt.where(Photo.flag == flag)
     if color_label:
         stmt = stmt.where(Photo.color_label == color_label)
+    if collection_id is not None:
+        stmt = stmt.where(Photo.id.in_(select(CollectionPhoto.photo_id).where(CollectionPhoto.collection_id == collection_id)))
+    if keyword_id is not None:
+        stmt = stmt.where(Photo.id.in_(select(photo_keywords.c.photo_id).where(photo_keywords.c.keyword_id == keyword_id)))
+    if folder:
+        stmt = stmt.where(Photo.folder == folder)
     if search:
         escaped = search.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
         stmt = stmt.where(Photo.filename.ilike(f"%{escaped}%", escape="\\"))
@@ -187,19 +196,8 @@ def export(
     db: Session = Depends(get_db), user: User = Depends(get_current_user),
 ):
     photo = _get_photo(db, user, photo_id)
-    path = storage.photo_path(user.id, photo_id, "original")
-    img = images.normalize(images.open_image(path.read_bytes()))
-    if body.max_size:
-        img.thumbnail((body.max_size, body.max_size), Image.Resampling.LANCZOS)
-    out = render(img, EditParams(**(photo.edit.params if photo.edit else {})), seed=photo_id)
-    buf = io.BytesIO()
-    if body.format == "png":
-        out.save(buf, "PNG")
-    else:
-        out.save(buf, "JPEG", quality=body.quality)
+    data, media, ext = render_export(photo, body)
     stem = photo.filename.rsplit(".", 1)[0]
-    ext = "png" if body.format == "png" else "jpg"
     return Response(
-        buf.getvalue(), media_type=f"image/{body.format}",
-        headers={"Content-Disposition": f'attachment; filename="{stem}-edit.{ext}"'},
+        data, media_type=media, headers={"Content-Disposition": f'attachment; filename="{stem}-edit.{ext}"'},
     )

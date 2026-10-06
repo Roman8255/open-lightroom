@@ -1,6 +1,17 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Index, SmallInteger, String, func
+from sqlalchemy import (
+    Column,
+    DateTime,
+    ForeignKey,
+    Index,
+    SmallInteger,
+    String,
+    Table,
+    Text,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -14,6 +25,22 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
     password_hash: Mapped[str] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+photo_keywords = Table(
+    "photo_keywords", Base.metadata,
+    Column("photo_id", ForeignKey("photos.id", ondelete="CASCADE"), primary_key=True),
+    Column("keyword_id", ForeignKey("keywords.id", ondelete="CASCADE"), primary_key=True),
+)
+
+
+class Keyword(Base):
+    __tablename__ = "keywords"
+    __table_args__ = (UniqueConstraint("user_id", "name"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(100))
 
 
 class Photo(Base):
@@ -32,8 +59,12 @@ class Photo(Base):
     rating: Mapped[int] = mapped_column(SmallInteger, default=0, server_default="0")
     flag: Mapped[int] = mapped_column(SmallInteger, default=0, server_default="0")  # -1 reject, 1 pick
     color_label: Mapped[str | None] = mapped_column(String(16))
+    folder: Mapped[str] = mapped_column(String(255), default="Uploads", server_default="Uploads", index=True)
+    title: Mapped[str | None] = mapped_column(String(255))
+    caption: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
+    keywords: Mapped[list[Keyword]] = relationship(secondary=photo_keywords, lazy="selectin")
     edit: Mapped["EditSettings | None"] = relationship(
         back_populates="photo", cascade="all, delete-orphan", uselist=False
     )
@@ -60,5 +91,44 @@ class EditHistory(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     photo_id: Mapped[int] = mapped_column(ForeignKey("photos.id", ondelete="CASCADE"), index=True)
     label: Mapped[str] = mapped_column(String(128))
+    params: Mapped[dict] = mapped_column(JSONB)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class Collection(Base):
+    __tablename__ = "collections"
+    __table_args__ = (UniqueConstraint("user_id", "name"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(120))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class CollectionPhoto(Base):
+    __tablename__ = "collection_photos"
+
+    collection_id: Mapped[int] = mapped_column(ForeignKey("collections.id", ondelete="CASCADE"), primary_key=True)
+    photo_id: Mapped[int] = mapped_column(ForeignKey("photos.id", ondelete="CASCADE"), primary_key=True)
+    added_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class PhotoComment(Base):
+    __tablename__ = "photo_comments"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    photo_id: Mapped[int] = mapped_column(ForeignKey("photos.id", ondelete="CASCADE"), index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    text: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class UserPreset(Base):
+    __tablename__ = "user_presets"
+    __table_args__ = (UniqueConstraint("user_id", "name"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(120))
     params: Mapped[dict] = mapped_column(JSONB)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
