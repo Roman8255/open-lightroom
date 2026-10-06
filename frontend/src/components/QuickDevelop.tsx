@@ -1,6 +1,10 @@
 import { Panel } from "./Panel";
 import { PRESETS, applyPreset } from "../modules/develop/presets";
+import { api } from "../api/client";
+import { applySettings } from "../gl/copyGroups";
+import { useDevelop } from "../store/develop";
 import { useLibrary } from "../store/library";
+import { withDefaults } from "../gl/params";
 import type { EditParams, NumericKey } from "../gl/params";
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
@@ -22,7 +26,8 @@ const PRESENCE: Row[] = [
 
 /** Library module's Quick Develop: ‹‹ ‹ › ›› buttons adjust all selected photos. */
 export function QuickDevelop() {
-  const { selected, quickAdjust } = useLibrary();
+  const { selected, quickAdjust, active } = useLibrary();
+  const clipboard = useDevelop((st) => st.clipboard);
   const ids = [...selected];
   const disabled = ids.length === 0;
   const bump = (r: Row, d: number) =>
@@ -46,6 +51,12 @@ export function QuickDevelop() {
 
   return (
     <Panel title="Quick Develop" defaultOpen={false}>
+      <div className="flex gap-2 mb-2">
+        <button className="lr-btn flex-1" disabled={active === null} title="Choose which settings to copy (⌘⇧C)"
+          onClick={() => active !== null && void api.getEdit(active).then(({ params }) => useDevelop.getState().openCopy(withDefaults(params)))}>Copy…</button>
+        <button className="lr-btn flex-1" disabled={disabled || !clipboard} title="Paste to all selected photos (⌘⇧V)"
+          onClick={() => clipboard && void quickAdjust(ids, (p) => applySettings(p, clipboard))}>Paste</button>
+      </div>
       <div className="flex items-center justify-between">
         <span>Saved Preset</span>
         <select className="bg-lr-bar rounded-sm px-1 py-0.5 w-32" disabled={disabled} value="" onChange={(e) => {

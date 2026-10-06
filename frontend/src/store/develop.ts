@@ -4,6 +4,7 @@ import {
   type EditParams, type Mask, type MaskAdj, type NumericKey, type RedEye, type Spot, MAX_EYES, MAX_MASKS, MAX_SPOTS,
   defaultParams, isDefault, withDefaults,
 } from "../gl/params";
+import { type ClipboardSettings, applySettings, pickSettings, loadCopySelection } from "../gl/copyGroups";
 import { useLibrary } from "./library";
 
 interface Entry { label: string; params: EditParams }
@@ -26,7 +27,7 @@ interface DevelopState {
   params: EditParams;
   history: Entry[];
   index: number;
-  clipboard: EditParams | null;
+  clipboard: ClipboardSettings | null;
   previous: EditParams | null; // settings of the previously opened photo ("Previous" button)
   saveState: "idle" | "saving" | "saved" | "error";
   before: boolean;
@@ -39,6 +40,14 @@ interface DevelopState {
   brush: BrushSettings;
   cropAspect: CropAspect;
   cropFlip: boolean;
+  zoom: boolean;
+  pan: [number, number]; // center of the visible area in frame-uv when zoomed
+  compare: null | "lr" | "tb"; // before | after split view
+  clip: boolean; // clipping warnings (J)
+  pendingTool: Tool; // tool to enable once the next photo has opened (e.g. R pressed in Library)
+  region: { x: number; y: number; w: number; h: number } | null; // visible frame area while zoomed (for the Navigator)
+  setRegion: (r: DevelopState["region"]) => void;
+  copyDialog: EditParams | null;
 
   open: (id: number) => Promise<void>;
   setNum: (key: NumericKey, value: number) => void;
@@ -49,8 +58,15 @@ interface DevelopState {
   jump: (i: number) => void;
   reset: () => void;
   apply: (p: EditParams, label: string) => void;
-  copy: () => void;
+  copy: () => void; // quick copy using the last selection
   paste: () => void;
+  openCopy: (source: EditParams) => void;
+  closeCopy: () => void;
+  setClipboard: (c: ClipboardSettings | null) => void;
+  setZoom: (on: boolean, center?: [number, number]) => void;
+  setPan: (c: [number, number]) => void;
+  setCompare: (m: DevelopState["compare"]) => void;
+  toggleClip: () => void;
   applyPrevious: () => void;
   setBefore: (b: boolean) => void;
   flushNow: () => Promise<void>;
@@ -113,7 +129,8 @@ export const useDevelop = create<DevelopState>((set, get) => {
   return {
     photoId: null, params: defaultParams(), history: [], index: 0, clipboard: null, previous: null, saveState: "idle", before: false,
     tool: null, selMask: null, selSpot: null, selEye: null, showMaskOverlay: true, brush: { size: 0.05, feather: 0.5, erase: false },
-    cropAspect: "free", cropFlip: false,
+    cropAspect: "free", cropFlip: false, zoom: false, pan: [0.5, 0.5], compare: null, clip: false, pendingTool: null, region: null, copyDialog: null,
+    setRegion: (region) => set({ region }),
 
     async open(id) {
       const prev = get().photoId;
@@ -123,7 +140,7 @@ export const useDevelop = create<DevelopState>((set, get) => {
       set({
         previous: prev !== null && prev !== id ? get().params : get().previous, photoId: id, params: p,
         history: [{ label: "Open", params: p }], index: 0, saveState: "idle", before: false,
-        tool: null, selMask: null, selSpot: null, selEye: null,
+        tool: get().pendingTool, pendingTool: null, selMask: null, selSpot: null, selEye: null, zoom: false, pan: [0.5, 0.5],
       });
     },
 
@@ -149,8 +166,15 @@ export const useDevelop = create<DevelopState>((set, get) => {
 
     reset() { get().apply(defaultParams(), "Reset"); set({ selMask: null, selSpot: null, selEye: null }); },
     apply(p, label) { set({ params: p }); get().commit(label); scheduleSave(); },
-    copy() { set({ clipboard: structuredClone(get().params) }); },
-    paste() { const c = get().clipboard; if (c) get().apply(keepGeometryAndLocal(get().params, structuredClone(c)), "Paste settings"); },
+    copy() { set({ clipboard: pickSettings(get().params, loadCopySelection()) }); },
+    paste() { const c = get().clipboard; if (c) get().apply(applySettings(get().params, c), "Paste settings"); },
+    openCopy: (copyDialog) => set({ copyDialog }),
+    closeCopy: () => set({ copyDialog: null }),
+    setClipboard: (clipboard) => set({ clipboard }),
+    setZoom: (zoom, center) => set({ zoom, ...(center ? { pan: center } : {}), ...(zoom ? { compare: null } : {}) }),
+    setPan: (pan) => set({ pan }),
+    setCompare: (compare) => set({ compare, ...(compare ? { zoom: false, tool: null } : {}) }),
+    toggleClip: () => set({ clip: !get().clip }),
     applyPrevious() { const p = get().previous; if (p) get().apply(keepGeometryAndLocal(get().params, structuredClone(p)), "Previous settings"); },
     setBefore: (before) => set({ before }),
     flushNow: flush,
@@ -162,7 +186,7 @@ export const useDevelop = create<DevelopState>((set, get) => {
         const last = params.masks.map((m, i) => ({ m, i })).filter(({ m }) => m.type === tool).pop();
         selMask = last ? last.i : null;
       }
-      set({ tool, selMask, selSpot: null, selEye: null });
+      set({ tool, selMask, selSpot: null, selEye: null, ...(tool ? { zoom: false, compare: null } : {}) });
     },
     setBrush: (b) => set({ brush: { ...get().brush, ...b } }),
     setShowMaskOverlay: (showMaskOverlay) => set({ showMaskOverlay }),

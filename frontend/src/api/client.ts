@@ -10,7 +10,12 @@ export interface Photo {
 export interface Counted { id: number | null; name: string; count: number }
 export interface PhotoComment { id: number; text: string; created_at: string }
 export interface Preset { id: number; name: string; params: EditParams }
-export interface ExportOpts { format: "jpeg" | "png"; quality: number; max_size?: number }
+export interface ExportOpts { format: "jpeg" | "png" | "tiff" | "webp"; quality: number; max_size?: number }
+export interface ExportRequestBody {
+  settings: Record<string, unknown>;
+  naming: { template: string; custom_text: string; start_number: number };
+  photo_ids: number[];
+}
 export interface User { id: number; email: string }
 export interface HistoryEntry { id: number; label: string; params: EditParams; created_at: string }
 export interface ListFilter {
@@ -70,6 +75,18 @@ export const api = {
   listHistory: (id: number) => req<HistoryEntry[]>(`/photos/${id}/history`),
   addSnapshot: (id: number, label: string) => req<HistoryEntry>(`/photos/${id}/history`, { method: "POST", body: json({ label }) }),
   exportPhoto: (id: number, opts: ExportOpts) => req<Blob>(`/photos/${id}/export`, { method: "POST", body: json(opts) }),
+
+  /** Lightroom-style export: one photo → the file itself, several → ZIP. */
+  exportBatch: async (body: ExportRequestBody): Promise<{ blob: Blob; filename: string }> => {
+    const r = await fetch(`${BASE}/export`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: json(body) });
+    if (!r.ok) {
+      let detail = r.statusText;
+      try { const j = await r.json(); detail = typeof j.detail === "string" ? j.detail : JSON.stringify(j.detail); } catch { /* not json */ }
+      throw new ApiError(r.status, detail);
+    }
+    const m = /filename="([^"]+)"/.exec(r.headers.get("content-disposition") ?? "");
+    return { blob: await r.blob(), filename: m?.[1] ?? "export" };
+  },
 
   folders: () => req<Counted[]>("/folders"),
   collections: () => req<Counted[]>("/collections"),

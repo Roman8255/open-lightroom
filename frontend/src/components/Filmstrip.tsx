@@ -12,7 +12,7 @@ export function Filmstrip({ onOpen }: { onOpen?: (id: number) => void }) {
     ref.current?.querySelector<HTMLElement>(`[data-id="${active}"]`)?.scrollIntoView({ inline: "center", block: "nearest" });
   }, [active]);
   return (
-    <div className="shrink-0 bg-lr-panel border-t border-lr-border">
+    <div className="lr-chrome shrink-0 bg-lr-panel border-t border-lr-border">
       <div className="h-[22px] flex items-center gap-3 px-3 text-lr-dim border-b border-lr-border bg-[#303030]">
         <span className="text-lr-text">All Photographs</span>
         <span>{photos.length} photos</span>

@@ -10,7 +10,7 @@ const MODULES: { id: Module | null; label: string }[] = [
 export function TopBar({ user, onLogout }: { user: User; onLogout: () => void }) {
   const { module, setModule } = useLibrary();
   return (
-    <header className="h-[46px] bg-lr-bar border-b border-lr-border flex items-center justify-between px-4 shrink-0">
+    <header className="lr-chrome h-[46px] bg-lr-bar border-b border-lr-border flex items-center justify-between px-4 shrink-0">
       <div className="flex items-center gap-3">
         <div className="w-8 h-8 rounded-sm bg-[#0b2a45] border border-[#2f6aa8] grid place-items-center text-[#5aa0e8] text-[13px] font-semibold tracking-tight">OL</div>
         <div className="leading-tight">

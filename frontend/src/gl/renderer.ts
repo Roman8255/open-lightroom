@@ -8,6 +8,9 @@ import { FRAG_FINAL, FRAG_GEO, FRAG_MASK, FRAG_TONE, VERT } from "./shader";
 
 /** normal = final result · crop = whole frame (transform applied, crop ignored) · local = untransformed source frame */
 export type View = "normal" | "crop" | "local";
+/** Visible rectangle of the frame in frame-uv (y down). Full frame = {0,0,1,1}. */
+export interface Region { x: number; y: number; w: number; h: number }
+export const FULL: Region = { x: 0, y: 0, w: 1, h: 1 };
 
 class Prog {
   private locs = new Map<string, WebGLUniformLocation | null>();
@@ -134,7 +137,8 @@ export class GLRenderer {
     this.gl.bindTexture(this.gl.TEXTURE_2D, tex);
   }
 
-  private setGeometry(pr: Prog, p: EditParams, view: View) {
+  private setGeometry(pr: Prog, p: EditParams, view: View, region: Region) {
+    pr.v4("u_view", region.x, region.y, region.w, region.h);
     const c = view === "normal" ? p.crop : { x: 0, y: 0, w: 1, h: 1, angle: view === "crop" ? p.crop.angle : 0 };
     const q = view === "local" ? { ...p, distortion: 0, vertical: 0, horizontal: 0, rotate: 0, scale: 100, aspect: 0, crop: c } : { ...p, crop: c };
     pr.v4("u_crop", c.x, c.y, c.w, c.h);
@@ -176,10 +180,9 @@ export class GLRenderer {
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.R16F, 256, 4, 0, gl.RED, gl.FLOAT, lut);
   }
 
-  draw(p: EditParams = defaultParams(), view: View = "normal", seed = 1) {
+  draw(p: EditParams = defaultParams(), view: View = "normal", seed = 1, region: Region = FULL, clip = false) {
     if (!this.G || !this.M || !this.T) return;
     const gl = this.gl;
-    const aspect = this.width / this.height;
     this.uploadMasks(p);
     this.uploadCurves(p);
 
@@ -187,7 +190,7 @@ export class GLRenderer {
     this.pass(this.G, this.geo);
     this.bindTex(0, this.srcTex);
     this.geo.i("u_src", 0);
-    this.setGeometry(this.geo, p, view);
+    this.setGeometry(this.geo, p, view, region);
     this.geo.f("u_lensV", p.lens_vignette / 100);
     const spotA = new Float32Array(32 * 4), spotB = new Float32Array(32 * 4);
     p.spots.slice(0, 32).forEach((s, i) => {
@@ -206,7 +209,7 @@ export class GLRenderer {
     this.pass(this.M, this.maskP);
     this.bindTex(2, this.maskSrcTex);
     this.maskP.i("u_maskSrc", 2);
-    this.setGeometry(this.maskP, p, view);
+    this.setGeometry(this.maskP, p, view, region);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
     // ── pass 2: tone → T
@@ -239,7 +242,8 @@ export class GLRenderer {
     const f = this.final;
     f.i("u_t", 0); f.i("u_curve", 3);
     f.v2("u_texel", 1 / this.outW, 1 / this.outH);
-    const maxdim = Math.max(this.outW, this.outH);
+    const maxdim = Math.max(this.outW / region.w, this.outH / region.h); // frame size in render pixels (zoom-aware)
+    f.v4("u_view", region.x, region.y, region.w, region.h); f.i("u_clip", clip);
     f.f("u_maxdim", maxdim); f.f("u_rs", maxdim / 2048); f.f("u_seed", seed);
     f.f("u_nr", p.noise_reduction / 100); f.f("u_clarity", p.clarity / 100); f.f("u_texture", p.texture / 100);
     f.f("u_sharp", p.sharpening / 100); f.f("u_sharpR", p.sharpen_radius);
@@ -261,7 +265,6 @@ export class GLRenderer {
     f.f("u_gBlend", g.blending / 100); f.f("u_gBal", g.balance / 100);
     f.v4("u_curveOn", ...[p.curve, p.curve_r, p.curve_g, p.curve_b].map((c) => (isIdentityCurve(c) ? 0 : 1)) as [number, number, number, number]);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-    void aspect;
   }
 
   /** 256-bin per-channel histogram of the current drawing buffer. */

@@ -107,7 +107,7 @@ export function RightPanel({ hist, imgAspect }: { hist: Hist | null; imgAspect: 
   );
 
   return (
-    <aside className="w-[290px] shrink-0 bg-lr-panel border-l border-lr-border flex flex-col">
+    <aside className="lr-side w-[290px] shrink-0 bg-lr-panel border-l border-lr-border flex flex-col">
       <div className="flex-1 overflow-y-auto">
         <Panel title="Histogram">
           <Histogram data={hist} />

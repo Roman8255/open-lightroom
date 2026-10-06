@@ -72,3 +72,47 @@ def test_other_user_cannot_touch_library(client, jpeg_bytes):
     assert mine.status_code == 201  # names are per user
     assert client.post("/api/keywords/apply", json={"photo_ids": [pid], "add": ["x"]}).status_code == 204
     assert client.get(f"/api/photos/{pid}").status_code == 404
+
+
+def test_batch_export_options(user_client, jpeg_bytes):
+    import zipfile
+
+    from PIL import Image
+
+    c = user_client
+    a, b = _upload(c, jpeg_bytes, "alpha.jpg"), _upload(c, jpeg_bytes, "beta.jpg")
+    c.put(f"/api/photos/{a}/edit", json={"crop": {"x": 0, "y": 0, "w": 0.5, "h": 1}, "exposure": 0.5})
+
+    def one(settings=None, naming=None, ids=None):
+        return c.post("/api/export", json={"photo_ids": ids or [a], "settings": settings or {}, "naming": naming or {}})
+
+    r = one({"format": "webp", "quality": 70})
+    assert r.status_code == 200 and r.headers["content-type"] == "image/webp" and "alpha.webp" in r.headers["content-disposition"]
+    r = one({"format": "tiff"})
+    assert r.content[:2] in (b"II", b"MM")
+    img = Image.open(io.BytesIO(one({"resize": {"mode": "long", "long_edge": 30, "no_enlarge": False}}).content))
+    assert img.size[1] == 30 and img.size[0] in (22, 23)  # the 60x80 crop scaled so its long edge is 30
+    big = Image.open(io.BytesIO(one({"resize": {"mode": "percent", "percent": 200, "no_enlarge": False}}).content))
+    assert big.size == (120, 160)
+    capped = Image.open(io.BytesIO(one({"resize": {"mode": "percent", "percent": 200, "no_enlarge": True}}).content))
+    assert capped.size == (60, 80)
+    mp = Image.open(io.BytesIO(one({"resize": {"mode": "megapixels", "megapixels": 0.001, "no_enlarge": False}}).content))
+    assert 900 <= mp.size[0] * mp.size[1] <= 1100
+
+    wm = one({"watermark": {"text": "(c) me", "position": "br"}, "sharpen": {"target": "screen", "amount": "high"}})
+    assert wm.status_code == 200
+    plain = Image.open(io.BytesIO(one().content)).convert("RGB").tobytes()
+    assert Image.open(io.BytesIO(wm.content)).convert("RGB").tobytes() != plain
+
+    j = Image.open(io.BytesIO(one({"copyright": "Roman", "metadata": "copyright"}).content))
+    assert j.getexif().get(0x8298) == "Roman"
+    small = one({"limit_kb": 10, "quality": 100})
+    assert len(small.content) <= 10 * 1024
+
+    z = one({}, {"template": "custom_seq", "custom_text": "Trip", "start_number": 7}, ids=[a, b])
+    names = zipfile.ZipFile(io.BytesIO(z.content)).namelist()
+    assert names == ["Trip-007.jpg", "Trip-008.jpg"]
+    z = one({}, {"template": "custom_xofy", "custom_text": "Trip"}, ids=[a, b])
+    assert zipfile.ZipFile(io.BytesIO(z.content)).namelist() == ["Trip (1 of 2).jpg", "Trip (2 of 2).jpg"]
+    assert one(ids=[999999]).status_code == 404
+    assert one({"format": "bmp"}).status_code == 422

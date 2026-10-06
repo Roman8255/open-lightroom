@@ -3,11 +3,16 @@ import { type Photo, fileUrl } from "../../api/client";
 import { ExportDialog } from "../../components/ExportDialog";
 import { Filmstrip } from "../../components/Filmstrip";
 import { CollectionsPanel, CommentsPanel, FoldersPanel, KeywordListPanel, KeywordingPanel, MetadataPanel, PublishPanel } from "../../components/LibraryPanels";
+import { withDefaults } from "../../gl/params";
+import { Navigator } from "../../components/Navigator";
 import { Panel } from "../../components/Panel";
 import { QuickDevelop } from "../../components/QuickDevelop";
 import { FlagIcon, LABELS, LABEL_COLOR, Stars } from "../../components/Rating";
 import { ThumbHistogram } from "../../components/ThumbHistogram";
+import { applySettings } from "../../gl/copyGroups";
+import { api } from "../../api/client";
 import { useHotkeys } from "../../hooks/useHotkeys";
+import { useDevelop } from "../../store/develop";
 import { useLibrary } from "../../store/library";
 
 const SORTS: Record<string, string> = { captured_at: "Capture Time", created_at: "Added Order", rating: "Rating", filename: "File Name" };
@@ -38,9 +43,22 @@ export function Library() {
 
   useHotkeys((e) => {
     const mod = e.metaKey || e.ctrlKey;
-    if (mod && e.key === "a") { e.preventDefault(); lib.selectAll(); return; }
+    const kk = e.key.toLowerCase();
+    if (mod && kk === "a") { e.preventDefault(); lib.selectAll(); return; }
+    if (mod && e.shiftKey && kk === "c") {
+      e.preventDefault();
+      if (active !== null) void api.getEdit(active).then(({ params }) => useDevelop.getState().openCopy(withDefaults(params)));
+      return;
+    }
+    if (mod && e.shiftKey && kk === "v") {
+      e.preventDefault();
+      const clip = useDevelop.getState().clipboard;
+      if (clip && selected.size) void lib.quickAdjust(ids(), (p) => applySettings(p, clip));
+      return;
+    }
+    if (mod && e.shiftKey && kk === "e") { e.preventDefault(); if (selected.size) setExporting(true); return; }
     if (mod) return;
-    const k = e.key.toLowerCase();
+    const k = kk;
     if (k === "arrowright") { lib.move(1, e.shiftKey); e.preventDefault(); }
     else if (k === "arrowleft") { lib.move(-1, e.shiftKey); e.preventDefault(); }
     else if (k === "arrowdown") { lib.move(view === "grid" ? gridCols : 1, e.shiftKey); e.preventDefault(); }
@@ -53,6 +71,8 @@ export function Library() {
     else if (k === "g") lib.setView("grid");
     else if (k === "e" || k === "enter") lib.setView("loupe");
     else if (k === "d") lib.setModule("develop");
+    else if (k === "r" && active !== null) { useDevelop.setState({ pendingTool: "crop" }); lib.setModule("develop"); }
+    else if (k === "v" && selected.size) void lib.quickAdjust(ids(), (p) => ({ ...p, bw: !p.bw }));
     else if (k === "delete" || k === "backspace") {
       if (selected.size && confirm(`Delete ${selected.size} photo(s) permanently?`)) void lib.remove(ids());
     }
@@ -74,13 +94,9 @@ export function Library() {
   return (
     <div className="flex-1 flex min-h-0" onDragOver={(e) => e.preventDefault()} onDrop={onDrop}>
       {/* ───── Left panel ───── */}
-      <aside className="w-[240px] shrink-0 bg-lr-panel border-r border-lr-border flex flex-col">
+      <aside className="lr-side w-[240px] shrink-0 bg-lr-panel border-r border-lr-border flex flex-col">
         <div className="flex-1 overflow-y-auto">
-          <Panel title="Navigator">
-            {activePhoto
-              ? <div className="h-[110px] bg-lr-bar grid place-items-center"><img src={fileUrl(activePhoto.id, "thumb")} className="w-full h-full object-contain" draggable={false} /></div>
-              : <div className="h-[110px] bg-lr-bar" />}
-          </Panel>
+          <Panel title="Navigator"><Navigator photo={activePhoto} /></Panel>
           <Panel title="Catalog">
             {([
               ["All Photographs", () => lib.setFilter({ rating_min: undefined, flag: undefined, color_label: undefined, q: undefined, collection_id: undefined, keyword_id: undefined, folder: undefined }), photos.length],
@@ -109,7 +125,7 @@ export function Library() {
       {/* ───── Center ───── */}
       <main className="flex-1 flex flex-col min-w-0">
         {/* Library Filter bar */}
-        <div className="shrink-0 bg-lr-panel border-b border-lr-border">
+        <div className="lr-chrome shrink-0 bg-lr-panel border-b border-lr-border">
           <div className="h-[26px] flex items-center justify-center gap-4 text-[12px]">
             <span className="text-lr-dim">Library Filter:</span>
             {filterBtn("text", "Text")}<span className="text-[#444]">|</span>
@@ -168,7 +184,7 @@ export function Library() {
         )}
 
         {/* Toolbar */}
-        <div className="h-[30px] shrink-0 bg-lr-panel border-t border-lr-border flex items-center gap-4 px-3">
+        <div className="lr-chrome h-[30px] shrink-0 bg-lr-panel border-t border-lr-border flex items-center gap-4 px-3">
           <div className="flex gap-0.5">
             <button className={`lr-btn !py-0 h-5 ${view === "grid" ? "lr-btn-active" : ""}`} title="Grid view (G)" onClick={() => lib.setView("grid")}>▦</button>
             <button className={`lr-btn !py-0 h-5 ${view === "loupe" ? "lr-btn-active" : ""}`} title="Loupe view (E)" onClick={() => lib.setView("loupe")}>▭</button>
@@ -192,7 +208,7 @@ export function Library() {
       </main>
 
       {/* ───── Right panel ───── */}
-      <aside className="w-[260px] shrink-0 bg-lr-panel border-l border-lr-border overflow-y-auto">
+      <aside className="lr-side w-[260px] shrink-0 bg-lr-panel border-l border-lr-border overflow-y-auto">
         <Panel title="Histogram"><ThumbHistogram photoId={active} /></Panel>
         <QuickDevelop />
         <KeywordingPanel photo={activePhoto} />
@@ -201,7 +217,7 @@ export function Library() {
         <CommentsPanel photo={activePhoto} />
         <Panel title="Shortcuts" defaultOpen={false}>
           <div className="text-lr-dim leading-5">
-            0–5 rate · P pick · X reject · U unflag · 6–9 color label · G grid · E loupe · D develop · ←→↑↓ navigate · ⌘/Ctrl+A all · Del delete
+            0–5 rate · P pick · X reject · U unflag · 6–9 color label · G grid · E loupe · D develop · R crop · V B&W · ←→↑↓ navigate · ⌘/Ctrl+A all · ⌘⇧C copy settings · ⌘⇧V paste to selection · ⌘⇧E export · Tab hide panels · L lights · F fullscreen · Del delete
           </div>
         </Panel>
       </aside>

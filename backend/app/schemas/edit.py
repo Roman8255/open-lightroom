@@ -202,7 +202,50 @@ class HistoryOut(BaseModel):
     created_at: str
 
 
+class ResizeSpec(BaseModel):
+    mode: Literal["none", "width_height", "long", "short", "megapixels", "percent"] = "none"
+    width: int | None = Field(None, ge=1, le=30000)
+    height: int | None = Field(None, ge=1, le=30000)
+    long_edge: int | None = Field(None, ge=1, le=30000)
+    short_edge: int | None = Field(None, ge=1, le=30000)
+    megapixels: float | None = Field(None, gt=0, le=500)
+    percent: float | None = Field(None, gt=0, le=500)
+    no_enlarge: bool = True
+
+
+class OutputSharpen(BaseModel):
+    target: Literal["none", "screen", "matte", "glossy"] = "none"
+    amount: Literal["low", "standard", "high"] = "standard"
+
+
+class Watermark(BaseModel):
+    text: str = Field(min_length=1, max_length=120)
+    size_pct: float = Field(4, ge=1, le=30)  # text height in % of the image's short edge
+    opacity: float = Field(60, ge=5, le=100)
+    position: Literal["tl", "tr", "bl", "br", "center"] = "br"
+
+
 class ExportRequest(BaseModel):
-    format: str = Field("jpeg", pattern="^(jpeg|png)$")
+    format: Literal["jpeg", "png", "tiff", "webp"] = "jpeg"
     quality: int = Field(90, ge=1, le=100)
-    max_size: int | None = Field(None, ge=16, le=20000)  # long edge in px
+    limit_kb: int | None = Field(None, ge=10, le=200000)  # JPEG / WebP only
+    resize: ResizeSpec = Field(default_factory=ResizeSpec)
+    max_size: int | None = Field(None, ge=16, le=20000)  # legacy: long edge in px
+    ppi: int = Field(300, ge=72, le=1200)
+    sharpen: OutputSharpen = Field(default_factory=OutputSharpen)
+    metadata: Literal["all", "copyright", "none"] = "all"
+    remove_location: bool = False
+    copyright: str | None = Field(None, max_length=200)
+    watermark: Watermark | None = None
+
+
+class ExportNaming(BaseModel):
+    template: Literal["filename", "custom", "custom_seq", "filename_seq", "date_filename", "custom_xofy"] = "filename"
+    custom_text: str = Field("", max_length=100)
+    start_number: int = Field(1, ge=0, le=999999)
+
+
+class ExportBatch(BaseModel):
+    photo_ids: list[int] = Field(min_length=1, max_length=500)
+    settings: ExportRequest = Field(default_factory=ExportRequest)
+    naming: ExportNaming = Field(default_factory=ExportNaming)

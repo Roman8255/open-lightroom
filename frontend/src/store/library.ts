@@ -16,6 +16,10 @@ interface LibraryState {
   thumbSize: number;
   uploading: { done: number; total: number } | null;
   error: string | null;
+  panels: 0 | 1 | 2; // Tab: 0 all visible · 1 side panels hidden · 2 everything hidden
+  lights: 0 | 1 | 2; // L: lights on · dim · out
+  setPanels: (p: 0 | 1 | 2) => void;
+  setLights: (l: 0 | 1 | 2) => void;
 
   load: () => Promise<void>;
   setFilter: (f: Partial<ListFilter>) => Promise<void>;
@@ -41,7 +45,9 @@ interface LibraryState {
 export const useLibrary = create<LibraryState>((set, get) => ({
   photos: [], loading: false, filter: { sort: "captured_at", order: "desc" },
   selected: new Set(), active: null, module: "library", view: "grid", thumbSize: 200,
-  uploading: null, error: null, sidebarVersion: 0,
+  uploading: null, error: null, sidebarVersion: 0, panels: 0, lights: 0,
+  setPanels: (panels) => set({ panels }),
+  setLights: (lights) => set({ lights }),
 
   async load() {
     set({ loading: true });

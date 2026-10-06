@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { type HistoryEntry, type Preset as UserPreset, api, fileUrl } from "../../api/client";
+import { type HistoryEntry, type Preset as UserPreset, api } from "../../api/client";
+import { Navigator } from "../../components/Navigator";
 import { CollectionsPanel, FoldersPanel } from "../../components/LibraryPanels";
 import { Panel } from "../../components/Panel";
 import { useDevelop } from "../../store/develop";
@@ -14,8 +15,10 @@ const SHORTCUTS: [string, string][] = [
   ["⌘⇧C / ⌘⇧V", "Copy / paste settings"],
 ];
 
-export function LeftPanel({ photoId, onExport }: { photoId: number; onExport: () => void }) {
-  const { history, index, jump, params, apply, copy, paste, clipboard } = useDevelop();
+export function LeftPanel({ photo, onExport }: { photo: { id: number; width: number; height: number }; onExport: () => void }) {
+  const photoId = photo.id;
+  const { history, index, jump, params, apply, openCopy, paste, clipboard, region, setPan } = useDevelop();
+  const crop = params.crop;
   const setError = useLibrary((s) => s.setError);
   const [snaps, setSnaps] = useState<HistoryEntry[]>([]);
   const [mine, setMine] = useState<UserPreset[]>([]);
@@ -31,12 +34,11 @@ export function LeftPanel({ photoId, onExport }: { photoId: number; onExport: ()
   };
 
   return (
-    <aside className="w-[240px] shrink-0 bg-lr-panel border-r border-lr-border flex flex-col">
+    <aside className="lr-side w-[240px] shrink-0 bg-lr-panel border-r border-lr-border flex flex-col">
       <div className="flex-1 overflow-y-auto">
         <Panel title="Navigator">
-          <div className="h-[110px] bg-lr-bar grid place-items-center">
-            <img src={fileUrl(photoId, "thumb")} className="w-full h-full object-contain" draggable={false} />
-          </div>
+          <Navigator photo={photo} rect={region && { x: crop.x + region.x * crop.w, y: crop.y + region.y * crop.h, w: region.w * crop.w, h: region.h * crop.h }}
+            onPick={(u, v) => setPan([Math.min(1, Math.max(0, (u - crop.x) / crop.w)), Math.min(1, Math.max(0, (v - crop.y) / crop.h))])} />
         </Panel>
         <Panel title="Presets">
           <div className="flex items-center justify-between mb-1">
@@ -82,7 +84,7 @@ export function LeftPanel({ photoId, onExport }: { photoId: number; onExport: ()
         </Panel>
       </div>
       <div className="shrink-0 p-2 grid grid-cols-3 gap-2 border-t border-lr-border">
-        <button className="lr-btn" onClick={copy}>Copy…</button>
+        <button className="lr-btn" onClick={() => openCopy(params)}>Copy…</button>
         <button className="lr-btn" disabled={!clipboard} onClick={paste}>Paste</button>
         <button className="lr-btn" onClick={onExport}>Export…</button>
       </div>

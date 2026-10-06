@@ -28,10 +28,14 @@ export function Develop() {
 
     if (mod && k === "z") { e.preventDefault(); e.shiftKey ? d.redo() : d.undo(); return; }
     if (mod && k === "y") { e.preventDefault(); d.redo(); return; }
-    if (mod && e.shiftKey && k === "c") { e.preventDefault(); d.copy(); return; }
+    if (mod && e.shiftKey && k === "c") { e.preventDefault(); d.openCopy(d.params); return; }
+    if (mod && e.altKey && k === "c") { e.preventDefault(); d.copy(); return; }
     if (mod && e.shiftKey && k === "v") { e.preventDefault(); d.paste(); return; }
+    if (mod && e.shiftKey && k === "e") { e.preventDefault(); setExporting(true); return; }
     if (mod) return;
 
+    // Alt+Y → before/after top-over-bottom
+    if (e.altKey && k === "y") { e.preventDefault(); d.setCompare(d.compare === "tb" ? null : "tb"); return; }
     // Alt+1..4 → select mask N (works even when Alt changes the produced character)
     const digit = /^Digit([1-4])$/.exec(e.code)?.[1] ?? (/^[1-4]$/.test(e.key) ? e.key : null);
     if (e.altKey && digit) {
@@ -43,13 +47,28 @@ export function Develop() {
     }
     if (e.altKey) return;
 
+    // Space / Z → fit ⇄ 100% (a focused button must not also "click")
+    if (k === " " || k === "z") {
+      e.preventDefault();
+      (document.activeElement as HTMLElement | null)?.blur?.();
+      if (!d.tool && !d.compare) d.setZoom(!d.zoom);
+      return;
+    }
+    if (k === "y") { e.preventDefault(); d.setCompare(d.compare === "lr" ? null : "lr"); return; }
+    if (k === "v") { e.preventDefault(); d.apply({ ...d.params, bw: !d.params.bw }, d.params.bw ? "Color" : "Black & White"); return; }
+    if (k === "j") { e.preventDefault(); d.toggleClip(); return; }
+
     // tool switches
     const toggle = (t: NonNullable<typeof d.tool>) => { e.preventDefault(); d.setTool(d.tool === t ? null : t); };
     if (k === "r") return toggle("crop");
     if (k === "q") return toggle(e.shiftKey ? "redeye" : "spot");
     if (k === "m") return toggle(e.shiftKey ? "radial" : "linear");
     if (k === "k") return toggle("brush");
-    if (d.tool && (k === "escape" || k === "enter")) { e.preventDefault(); d.setTool(null); return; }
+    if (k === "escape" || (d.tool && k === "enter")) {
+      e.preventDefault();
+      if (d.tool) d.setTool(null); else if (d.compare) d.setCompare(null); else if (d.zoom) d.setZoom(false);
+      return;
+    }
 
     // mask selection / state
     if (k === "[" || k === "]") {
@@ -90,13 +109,17 @@ export function Develop() {
 
   return (
     <div className="flex-1 flex min-h-0">
-      <LeftPanel photoId={photo.id} onExport={() => setExporting(true)} />
+      <LeftPanel photo={photo} onExport={() => setExporting(true)} />
       <main className="flex-1 flex flex-col min-w-0">
-        <DevelopCanvas photoId={photo.id} onHistogram={setHist} />
-        <div className="h-[30px] shrink-0 bg-lr-panel border-t border-lr-border flex items-center gap-4 px-3">
+        <DevelopCanvas photoId={photo.id} mime={photo.mime_type} onHistogram={setHist} />
+        <div className="lr-chrome h-[30px] shrink-0 bg-lr-panel border-t border-lr-border flex items-center gap-4 px-3">
           <div className="flex gap-0.5">
-            <button className={`lr-btn !py-0 h-5 ${!dev.before ? "lr-btn-active" : ""}`} title="Loupe view" onClick={() => dev.setBefore(false)}>▭</button>
-            <button className={`lr-btn !py-0 h-5 ${dev.before ? "lr-btn-active" : ""}`} title="Before (\\ toggles)" onClick={() => dev.setBefore(!dev.before)}>Y|Y</button>
+            <button className={`lr-btn !py-0 h-5 ${!dev.before && !dev.compare ? "lr-btn-active" : ""}`} title="Loupe view" onClick={() => { dev.setBefore(false); dev.setCompare(null); }}>▭</button>
+            <button className={`lr-btn !py-0 h-5 ${dev.compare === "lr" ? "lr-btn-active" : ""}`} title="Before | After (Y)" onClick={() => dev.setCompare(dev.compare === "lr" ? null : "lr")}>Y|Y</button>
+            <button className={`lr-btn !py-0 h-5 ${dev.compare === "tb" ? "lr-btn-active" : ""}`} title="Before / After top-bottom (Alt+Y)" onClick={() => dev.setCompare(dev.compare === "tb" ? null : "tb")}>Y⁄Y</button>
+            <button className={`lr-btn !py-0 h-5 ${dev.before ? "lr-btn-active" : ""}`} title="Before only (backslash key)" onClick={() => dev.setBefore(!dev.before)}>◧</button>
+            <button className={`lr-btn !py-0 h-5 ${dev.zoom ? "lr-btn-active" : ""}`} title="Fit ⇄ 100% (Space)" onClick={() => !dev.tool && !dev.compare && dev.setZoom(!dev.zoom)}>1:1</button>
+            <button className={`lr-btn !py-0 h-5 ${dev.clip ? "lr-btn-active" : ""}`} title="Clipping warnings (J)" onClick={dev.toggleClip}>J</button>
           </div>
           <label className="flex items-center gap-1.5 text-lr-dim"><input type="checkbox" disabled /> Soft Proofing</label>
           <Stars value={photo.rating} size={14} onChange={(n) => void lib.patch([photo.id], { rating: n })} />

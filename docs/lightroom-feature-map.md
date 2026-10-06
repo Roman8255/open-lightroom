@@ -31,7 +31,10 @@
 | Graduated filter, radial filter, adjustment brush (4 masks, per-mask adjustments) | ✅ |
 | History, snapshots, copy / paste, previous, before / after | ✅ |
 | Presets: built-in + user presets | ✅ |
-| Export JPEG / PNG | ✅ |
+| Export dialog: naming, JPEG/PNG/TIFF/WebP, quality, size limit, resizing, ppi, output sharpening, metadata, watermark, presets | ✅ (sRGB only, 8-bit) |
+| Copy Settings dialog + paste to selection | ✅ |
+| Zoom fit ⇄ 100 % (Space), Navigator, before | after split (Y), clipping warnings (J) | ✅ |
+| Panels hide (Tab), lights out (L), fullscreen (F) | ✅ |
 | Masks: range / luminance / color, AI subject & sky | planned |
 | RAW files | planned (rawpy) |
 | Map, Book, Slideshow, Print, Web | not planned |

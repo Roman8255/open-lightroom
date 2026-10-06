@@ -15,7 +15,10 @@ keyboard shortcuts) so Lightroom users feel at home.
   up to 4 masks, per-mask adjustments, invert, show/hide and mask overlay.
 - **Non-destructive:** originals are never modified; only edit parameters (JSON) are stored.
 - History with undo/redo, snapshots, copy/paste, user + built-in presets, before/after.
-- **Export** JPEG/PNG with quality and size (the server re-renders with the same pipeline).
+- **Export dialog like Lightroom:** file naming templates, JPEG / PNG / TIFF / WebP, quality, file-size limit, resize (width & height, long/short edge,
+  megapixels, percent, don't enlarge), resolution, output sharpening, metadata (all / copyright / none, remove location), text watermark, presets.
+- **Copy Settings dialog:** choose exactly which settings are copied; paste to one or all selected photos.
+- Zoom to 100 % with the original image, before | after split view, clipping warnings, Navigator.
 - Multi-user accounts (email + password).
 
 See [docs/lightroom-feature-map.md](docs/lightroom-feature-map.md) for what is done and planned.
@@ -50,8 +53,13 @@ docker compose -f docker-compose.prod.yml -f docker-compose.local.yml up --build
 ```
 
 ## Keyboard shortcuts
-**Global / Library:** `G` grid · `E` loupe · `D` develop · `0–5` rating · `P/X/U` pick/reject/unflag · `6–9` color labels ·
-arrows navigate · `Ctrl/⌘+A` select all · `Del` delete
+**Global / Library:** `G` grid · `E` loupe · `D` develop · `R` crop · `V` B&W · `0–5` rating · `P/X/U` pick/reject/unflag ·
+`6–9` color labels · arrows navigate · `Ctrl/⌘+A` select all · `Del` delete · `Tab` hide side panels · `Shift+Tab` hide all ·
+`L` dim / black out the interface · `F` fullscreen · `Ctrl/⌘+Shift+C` copy settings · `Ctrl/⌘+Shift+V` paste (to all selected in Library) ·
+`Ctrl/⌘+Shift+E` export
+
+**View (Develop):** `Space` / `Z` fit ⇄ 100 % (drag to pan, click toggles too) · `Y` before | after · `Alt+Y` before / after top-bottom ·
+`\` before only · `J` clipping warnings
 
 **Develop tools:** `R` crop · `Q` spot removal · `Shift+Q` red eye · `M` graduated filter · `Shift+M` radial filter · `K` brush ·
 `Enter`/`Esc` finish tool · `X` (in crop) swap orientation
@@ -59,7 +67,7 @@ arrows navigate · `Ctrl/⌘+A` select all · `Del` delete
 **Masks:** `Alt+1…4` select mask 1–4 (also switches to its tool) · `[` / `]` previous / next mask (brush & spot: size) ·
 `H` show/hide selected mask · `Shift+I` invert · `O` mask overlay · `Del` delete mask/spot · hold `Alt` while painting to erase
 
-**Editing:** `\` before/after · `Ctrl/⌘+Z` undo · `Ctrl/⌘+Shift+Z` redo · `Ctrl/⌘+Shift+C/V` copy/paste settings
+**Editing:** `V` B&W · `Ctrl/⌘+Z` undo · `Ctrl/⌘+Shift+Z` redo · `Ctrl/⌘+Alt+C` copy with the last selection
 
 ## Architecture
 See [docs/architecture.md](docs/architecture.md) and [docs/edit-params.md](docs/edit-params.md).

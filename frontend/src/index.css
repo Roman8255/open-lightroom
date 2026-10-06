@@ -20,3 +20,10 @@ input[type="range"].lr-slider:hover::-webkit-slider-thumb { background: #e8e8e8;
 
 .lr-btn { @apply bg-lr-panel2 border border-lr-border text-lr-text rounded-sm px-2 py-1 hover:text-lr-hi hover:bg-[#404040] disabled:opacity-40 disabled:hover:bg-lr-panel2; }
 .lr-btn-active { @apply bg-[#505050] text-lr-hi; }
+
+/* Tab / Shift+Tab hide panels, L dims or blacks out the interface (Lightroom "lights") */
+[data-panels="1"] .lr-side, [data-panels="2"] .lr-side, [data-panels="2"] .lr-chrome { display: none; }
+[data-lights="1"] .lr-side, [data-lights="1"] .lr-chrome { opacity: .12; transition: opacity .15s; }
+[data-lights="1"] .lr-side:hover, [data-lights="1"] .lr-chrome:hover { opacity: 1; }
+[data-lights="2"] .lr-side, [data-lights="2"] .lr-chrome { visibility: hidden; }
+[data-lights="2"] .lr-stage, [data-lights="2"] { background: #000; }

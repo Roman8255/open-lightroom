@@ -28,8 +28,8 @@ from app.schemas.api import (
     PhotoIds,
     PresetOut,
 )
-from app.schemas.edit import EditParams, ExportRequest
-from app.services.exporter import render_export
+from app.schemas.edit import EditParams, ExportBatch, ExportRequest
+from app.services.exporter import export_batch, render_export
 
 router = APIRouter(tags=["library"])
 
@@ -241,3 +241,17 @@ def delete_preset(pid: int, db: Session = Depends(get_db), user: User = Depends(
         raise HTTPException(404, "Preset not found")
     db.delete(row)
     db.commit()
+
+
+# ── batch export (Lightroom's Export dialog) ──
+@router.post("/export")
+def export_photos(body: ExportBatch, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    found = {p.id: p for p in db.scalars(select(Photo).where(Photo.user_id == user.id, Photo.id.in_(body.photo_ids)))}
+    photos = [found[i] for i in dict.fromkeys(body.photo_ids) if i in found]
+    if not photos:
+        raise HTTPException(404, "No photos found")
+    if len(photos) > 100:
+        raise HTTPException(400, "Export at most 100 photos at once")
+    data, media, name = export_batch(photos, body)
+    safe = name.replace('"', "")
+    return Response(data, media_type=media, headers={"Content-Disposition": f'attachment; filename="{safe}"'})

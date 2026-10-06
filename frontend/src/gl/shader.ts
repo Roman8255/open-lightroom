@@ -16,8 +16,9 @@ const vec3 LUMA = vec3(0.2126,0.7152,0.0722);
 `;
 
 const GEO_FN = `
-uniform vec4 u_crop; uniform float u_aspect, u_scale, u_aspAdj, u_vert, u_horiz, u_theta, u_dist; uniform bool u_geo;
+uniform vec4 u_crop; uniform vec4 u_view; uniform float u_aspect, u_scale, u_aspAdj, u_vert, u_horiz, u_theta, u_dist; uniform bool u_geo;
 vec2 geo(vec2 uv){
+  uv = u_view.xy + uv*u_view.zw; // zoom: visible sub-rectangle of the frame
   vec2 p = u_crop.xy + uv*u_crop.zw;
   if(!u_geo) return p;
   vec2 q = (p-0.5)*vec2(u_aspect,1.);
@@ -134,6 +135,7 @@ uniform bool u_bw, u_useHsl, u_useGrade;
 uniform vec3 u_hsl[8];
 uniform vec3 u_gTint[3]; uniform vec3 u_gLum; uniform float u_gBlend, u_gBal;
 uniform vec4 u_curveOn; // master, r, g, b
+uniform vec4 u_view; uniform bool u_clip;
 const float CENTERS[8] = float[8](0.,30.,60.,120.,180.,240.,270.,300.);
 
 vec3 tx(vec2 off){ return texture(u_t, v_t + off*u_texel).rgb; }
@@ -220,7 +222,7 @@ void main(){
   if(u_curveOn.w > 0.5) c.b = lut(c.b,3.);
 
   if(u_vig != 0.){
-    vec2 p = (vec2(v_t.x,1.-v_t.y)-0.5)*2.;
+    vec2 p = ((u_view.xy + vec2(v_t.x,1.-v_t.y)*u_view.zw)-0.5)*2.;
     float d = length(p)/1.4142;
     float f = pow(clamp((d-0.35)/0.65,0.,1.),2.);
     c = clamp(c*(1.+u_vig*f*0.9), 0., 1.);
@@ -228,6 +230,10 @@ void main(){
   if(u_grain > 0.){
     float n = fract(sin(dot(v_t*1000.+u_seed, vec2(12.9898,78.233)))*43758.5453)*2.-1.;
     c = clamp(c + n*u_grain*0.08, 0., 1.);
+  }
+  if(u_clip){
+    if(max(c.r,max(c.g,c.b)) >= 0.99) c = vec3(1.,0.,0.);
+    else if(min(c.r,min(c.g,c.b)) <= 0.01) c = vec3(0.,0.3,1.);
   }
   o = vec4(c,1.);
 }`;
