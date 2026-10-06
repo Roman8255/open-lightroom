@@ -34,6 +34,19 @@ make test                            # backend + frontend tests
 make lint
 ```
 
+## Production / HTTPS with Traefik
+`lightroom.dev` serves the frontend and `api.lightroom.dev` the API (Traefik v3, Let's Encrypt).
+```bash
+# set DOMAIN, ACME_EMAIL, SECRET_KEY, POSTGRES_PASSWORD in .env; point DNS A records at the host
+docker compose -f docker-compose.prod.yml up -d --build
+```
+**Local HTTPS** (self-made certificate instead of Let's Encrypt):
+```bash
+scripts/local-certs.sh        # creates certs/ (local CA + cert for lightroom.dev, *.lightroom.dev)
+scripts/trust-local-ca.sh     # you run it: trusts the CA + adds /etc/hosts entry (asks for admin password)
+docker compose -f docker-compose.prod.yml -f docker-compose.local.yml up --build
+```
+
 ## Keyboard shortcuts
 `G` grid · `E` loupe · `D` develop · `0–5` rating · `P/X/U` pick/reject/unflag · `6–9` color labels ·
 `←→` navigate · `\` before/after · `Ctrl/⌘+Z` undo · `Ctrl/⌘+Shift+Z` redo · `Ctrl/⌘+Shift+C/V` copy/paste settings.

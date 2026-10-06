@@ -15,6 +15,8 @@ def _default_curve() -> list[list[float]]:
 
 
 class EditParams(BaseModel):
+    # Treatment
+    bw: bool = False
     # Basic – white balance
     temperature: float = Field(0, ge=-100, le=100)
     tint: float = Field(0, ge=-100, le=100)

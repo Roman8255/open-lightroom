@@ -9,7 +9,7 @@ export interface Photo {
 export interface User { id: number; email: string }
 export interface HistoryEntry { id: number; label: string; params: EditParams; created_at: string }
 export interface ListFilter {
-  rating_min?: number; flag?: -1 | 0 | 1; color_label?: string;
+  rating_min?: number; flag?: -1 | 0 | 1; color_label?: string; q?: string;
   sort?: "captured_at" | "created_at" | "rating" | "filename"; order?: "asc" | "desc";
 }
 
@@ -17,10 +17,12 @@ export class ApiError extends Error {
   constructor(public status: number, message: string) { super(message); }
 }
 
+const BASE: string = import.meta.env.VITE_API_URL ?? "/api";
+
 async function req<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
   if (init.body && !(init.body instanceof FormData)) headers.set("Content-Type", "application/json");
-  const r = await fetch(`/api${path}`, { ...init, headers, credentials: "include" });
+  const r = await fetch(`${BASE}${path}`, { ...init, headers, credentials: "include" });
   if (!r.ok) {
     let detail = r.statusText;
     try {
@@ -64,4 +66,4 @@ export const api = {
     req<Blob>(`/photos/${id}/export`, { method: "POST", body: json(opts) }),
 };
 
-export const fileUrl = (id: number, kind: "thumb" | "preview" | "original") => `/api/photos/${id}/file/${kind}`;
+export const fileUrl = (id: number, kind: "thumb" | "preview" | "original") => `${BASE}/photos/${id}/file/${kind}`;

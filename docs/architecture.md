@@ -19,3 +19,9 @@ Browser (React, WebGL2)  ──/api──▶  FastAPI  ──▶  PostgreSQL (me
 ## Roadmap / known limits
 RAW support (rawpy), crop/rotate, local masks, presets saved per user, collections, keywords,
 lens corrections, zoom/pan at 100% in Develop, pagination for very large libraries.
+
+## Deployment
+`docker-compose.prod.yml`: Traefik routes `lightroom.dev` → nginx (static build) and `api.lightroom.dev` →
+FastAPI (an `addprefix /api` middleware maps the root of the API host onto the internal `/api` router).
+The frontend is built with `VITE_API_URL=https://api.lightroom.dev`; the auth cookie is SameSite=Lax and
+works across the two subdomains (same site); CORS allows `https://lightroom.dev` with credentials.

@@ -12,7 +12,7 @@ from app.core.security import (
     verify_password,
 )
 from app.models import User
-from app.schemas.api import Credentials, UserOut
+from app.schemas.api import Credentials, LoginBody, UserOut
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -37,7 +37,7 @@ def register(body: Credentials, resp: Response, db: Session = Depends(get_db)):
 
 
 @router.post("/login", response_model=UserOut)
-def login(body: Credentials, resp: Response, db: Session = Depends(get_db)):
+def login(body: LoginBody, resp: Response, db: Session = Depends(get_db)):
     user = db.scalar(select(User).where(User.email == body.email.lower()))
     if not user or not verify_password(body.password, user.password_hash):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid email or password")

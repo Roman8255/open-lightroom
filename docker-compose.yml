@@ -33,7 +33,9 @@ services:
       - "8000:8000"
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      target: dev
     command: npm run dev -- --host 0.0.0.0
     environment:
       API_PROXY_TARGET: http://backend:8000

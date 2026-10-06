@@ -11,6 +11,7 @@ interface DevelopState {
   history: Entry[];
   index: number;
   clipboard: EditParams | null;
+  previous: EditParams | null; // settings of the previously opened photo ("Previous" button)
   saveState: "idle" | "saving" | "saved" | "error";
   before: boolean;
 
@@ -25,6 +26,7 @@ interface DevelopState {
   apply: (p: EditParams, label: string) => void;
   copy: () => void;
   paste: () => void;
+  applyPrevious: () => void;
   setBefore: (b: boolean) => void;
   flushNow: () => Promise<void>;
 }
@@ -51,13 +53,14 @@ export const useDevelop = create<DevelopState>((set, get) => {
   };
 
   return {
-    photoId: null, params: defaultParams(), history: [], index: 0, clipboard: null, saveState: "idle", before: false,
+    photoId: null, params: defaultParams(), history: [], index: 0, clipboard: null, previous: null, saveState: "idle", before: false,
 
     async open(id) {
-      if (get().photoId !== null && get().photoId !== id) await flush();
+      const prev = get().photoId;
+      if (prev !== null && prev !== id) await flush();
       const { params } = await api.getEdit(id);
       const p = withDefaults(params);
-      set({ photoId: id, params: p, history: [{ label: "Open", params: p }], index: 0, saveState: "idle", before: false });
+      set({ previous: prev !== null && prev !== id ? get().params : get().previous, photoId: id, params: p, history: [{ label: "Open", params: p }], index: 0, saveState: "idle", before: false });
     },
 
     setNum: (key, value) => { set({ params: { ...get().params, [key]: value } }); scheduleSave(); },
@@ -84,6 +87,7 @@ export const useDevelop = create<DevelopState>((set, get) => {
     apply(p, label) { set({ params: p }); get().commit(label); scheduleSave(); },
     copy() { set({ clipboard: structuredClone(get().params) }); },
     paste() { const c = get().clipboard; if (c) get().apply(structuredClone(c), "Paste settings"); },
+    applyPrevious() { const p = get().previous; if (p) get().apply(structuredClone(p), "Previous settings"); },
     setBefore: (before) => set({ before }),
     flushNow: flush,
   };

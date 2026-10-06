@@ -1,7 +1,7 @@
 import io
 from typing import Literal
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse, Response
 from PIL import Image, UnidentifiedImageError
 from sqlalchemy import select
@@ -74,19 +74,23 @@ def list_photos(
     rating_min: int = 0,
     flag: Literal[-1, 0, 1] | None = None,
     color_label: str | None = None,
+    search: str | None = Query(None, alias="q", max_length=100),
     sort: Literal["captured_at", "created_at", "rating", "filename"] = "captured_at",
     order: Literal["asc", "desc"] = "desc",
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    q = select(Photo).where(Photo.user_id == user.id, Photo.rating >= rating_min)
+    stmt = select(Photo).where(Photo.user_id == user.id, Photo.rating >= rating_min)
     if flag is not None:
-        q = q.where(Photo.flag == flag)
+        stmt = stmt.where(Photo.flag == flag)
     if color_label:
-        q = q.where(Photo.color_label == color_label)
+        stmt = stmt.where(Photo.color_label == color_label)
+    if search:
+        escaped = search.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        stmt = stmt.where(Photo.filename.ilike(f"%{escaped}%", escape="\\"))
     col = getattr(Photo, sort)
-    q = q.order_by(col.desc().nulls_last() if order == "desc" else col.asc().nulls_last(), Photo.id)
-    return [_out(p) for p in db.scalars(q)]
+    stmt = stmt.order_by(col.desc().nulls_last() if order == "desc" else col.asc().nulls_last(), Photo.id)
+    return [_out(p) for p in db.scalars(stmt)]
 
 
 @router.get("/{photo_id}", response_model=PhotoOut)

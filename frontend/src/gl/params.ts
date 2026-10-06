@@ -4,6 +4,7 @@ export type HslBandName = (typeof HSL_BANDS)[number];
 export interface HslBand { hue: number; sat: number; lum: number }
 
 export interface EditParams {
+  bw: boolean;
   temperature: number; tint: number;
   exposure: number; contrast: number; highlights: number; shadows: number; whites: number; blacks: number;
   clarity: number; vibrance: number; saturation: number;
@@ -18,6 +19,7 @@ export type NumericKey = {
 }[keyof EditParams];
 
 export const defaultParams = (): EditParams => ({
+  bw: false,
   temperature: 0, tint: 0,
   exposure: 0, contrast: 0, highlights: 0, shadows: 0, whites: 0, blacks: 0,
   clarity: 0, vibrance: 0, saturation: 0,

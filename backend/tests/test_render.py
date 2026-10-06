@@ -31,3 +31,9 @@ def test_all_params_run():
                    blacks=-10, clarity=40, vibrance=30, saturation=10, sharpening=50, vignette=-40,
                    grain=20, hsl={"blue": {"hue": 20, "sat": -30, "lum": 10}})
     assert render(_gray(), p).size == (32, 32)
+
+
+def test_bw_treatment_is_neutral():
+    img = Image.new("RGB", (16, 16), (200, 60, 30))
+    px = np.asarray(render(img, EditParams(bw=True)))[0, 0]
+    assert px[0] == px[1] == px[2]

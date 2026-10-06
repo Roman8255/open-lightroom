@@ -4,6 +4,7 @@ Stored as JSON in `edit_settings.params`. Defaults are all `0` except the curve.
 
 | Key | Range | Notes |
 |---|---|---|
+| bw | bool | Black & White treatment (luminance only) |
 | temperature, tint | -100..100 | white balance in linear light |
 | exposure | -5..5 EV | multiplies linear light by 2^EV |
 | contrast | -100..100 | around 0.5 mid-gray |

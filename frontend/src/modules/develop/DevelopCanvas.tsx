@@ -58,6 +58,7 @@ export function DevelopCanvas({ photoId, onHistogram }: { photoId: number; onHis
     setReady(false);
     let cancelled = false;
     const img = new Image();
+    img.crossOrigin = "use-credentials"; // API may live on another subdomain
     img.onload = () => {
       if (cancelled || !gl.current) return;
       gl.current.setImage(img);

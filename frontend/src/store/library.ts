@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { type ListFilter, type Photo, api } from "../api/client";
+import { type EditParams, isDefault, withDefaults } from "../gl/params";
 
 export type Module = "library" | "develop";
 export type ViewMode = "grid" | "loupe";
@@ -28,6 +29,8 @@ interface LibraryState {
   patch: (ids: number[], patch: { rating?: number; flag?: number; color_label?: string }) => Promise<void>;
   remove: (ids: number[]) => Promise<void>;
   markEdited: (id: number, edited: boolean) => void;
+  /** Quick Develop: read-modify-write edit params of several photos. */
+  quickAdjust: (ids: number[], fn: (p: EditParams) => EditParams) => Promise<void>;
   setError: (e: string | null) => void;
 }
 
@@ -127,6 +130,19 @@ export const useLibrary = create<LibraryState>((set, get) => ({
       await Promise.all(ids.map((id) => api.deletePhoto(id)));
       set({ selected: new Set(), active: null });
       await get().load();
+    } catch (e) {
+      set({ error: (e as Error).message });
+    }
+  },
+
+  async quickAdjust(ids, fn) {
+    try {
+      await Promise.all(ids.map(async (id) => {
+        const { params } = await api.getEdit(id);
+        const next = fn(withDefaults(params));
+        await api.putEdit(id, next);
+        get().markEdited(id, !isDefault(next));
+      }));
     } catch (e) {
       set({ error: (e as Error).message });
     }

@@ -42,32 +42,26 @@ export function Develop() {
 
   return (
     <div className="flex-1 flex min-h-0">
-      <LeftPanel photoId={photo.id} />
+      <LeftPanel photoId={photo.id} onExport={() => setExporting(true)} />
       <main className="flex-1 flex flex-col min-w-0">
         <DevelopCanvas photoId={photo.id} onHistogram={setHist} />
-        <div className="h-8 shrink-0 bg-lr-panel border-t border-lr-border flex items-center gap-4 px-3">
-          <button className={`px-2 py-0.5 rounded ${dev.before ? "bg-lr-line text-lr-hi" : "hover:text-lr-hi"}`} onClick={() => dev.setBefore(!dev.before)}>
-            Before / After (\)
-          </button>
+        <div className="h-[30px] shrink-0 bg-lr-panel border-t border-lr-border flex items-center gap-4 px-3">
+          <div className="flex gap-0.5">
+            <button className={`lr-btn !py-0 h-5 ${!dev.before ? "lr-btn-active" : ""}`} title="Loupe view" onClick={() => dev.setBefore(false)}>▭</button>
+            <button className={`lr-btn !py-0 h-5 ${dev.before ? "lr-btn-active" : ""}`} title="Before (\\ toggles)" onClick={() => dev.setBefore(!dev.before)}>Y|Y</button>
+          </div>
+          <label className="flex items-center gap-1.5 text-lr-dim"><input type="checkbox" disabled /> Soft Proofing</label>
           <Stars value={photo.rating} size={14} onChange={(n) => void lib.patch([photo.id], { rating: n })} />
           <div className="flex-1" />
-          <span className="text-lr-dim">
+          <button className="lr-btn !py-0 h-5" disabled={dev.index === 0} onClick={dev.undo}>Undo</button>
+          <button className="lr-btn !py-0 h-5" disabled={dev.index >= dev.history.length - 1} onClick={dev.redo}>Redo</button>
+          <span className="text-lr-dim w-14 text-right">
             {dev.saveState === "saving" ? "Saving…" : dev.saveState === "saved" ? "Saved" : dev.saveState === "error" ? "Save failed" : ""}
           </span>
         </div>
         <Filmstrip />
       </main>
-      <div className="flex flex-col">
-        <div className="flex-1 min-h-0 flex"><RightPanel hist={hist} /></div>
-        <div className="shrink-0 bg-lr-panel border-l border-t border-lr-border p-2 grid grid-cols-3 gap-1 w-[290px]">
-          <button className="bg-lr-panel2 hover:bg-lr-line py-1 rounded" onClick={dev.copy}>Copy</button>
-          <button className="bg-lr-panel2 hover:bg-lr-line py-1 rounded disabled:opacity-40" disabled={!dev.clipboard} onClick={dev.paste}>Paste</button>
-          <button className="bg-lr-panel2 hover:bg-lr-line py-1 rounded" onClick={dev.reset}>Reset</button>
-          <button className="bg-lr-panel2 hover:bg-lr-line py-1 rounded" onClick={dev.undo}>Undo</button>
-          <button className="bg-lr-panel2 hover:bg-lr-line py-1 rounded" onClick={dev.redo}>Redo</button>
-          <button className="bg-lr-accent text-black py-1 rounded" onClick={() => setExporting(true)}>Export…</button>
-        </div>
-      </div>
+      <RightPanel hist={hist} />
       {exporting && <ExportDialog photoIds={[photo.id]} onClose={() => setExporting(false)} />}
     </div>
   );

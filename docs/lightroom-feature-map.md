@@ -12,6 +12,8 @@
 | Develop: Effects (vignette, grain) | ✅ |
 | Histogram, history, snapshots, copy/paste, before/after | ✅ |
 | Presets | ✅ built-in (user presets planned) |
+| Quick Develop, Library Filter (text/attribute), Auto tone, B&W treatment, Previous | ✅ |
+| Classic layout (identity plate, module picker, panel set, filmstrip info line) | ✅ |
 | Export JPEG/PNG | ✅ |
 | Crop / rotate / straighten | planned |
 | Local adjustments (brush, gradients, radial) | planned |

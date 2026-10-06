@@ -9,7 +9,7 @@ in vec2 v_uv; out vec4 o;
 uniform sampler2D u_tex; uniform sampler2D u_curve;
 uniform vec2 u_texel; uniform float u_seed;
 uniform float u_exposure,u_temp,u_tint,u_contrast,u_hl,u_sh,u_wh,u_bl,u_clarity,u_vibrance,u_sat,u_sharp,u_vig,u_grain;
-uniform vec3 u_hsl[8]; uniform bool u_useHsl; uniform bool u_useCurve;
+uniform vec3 u_hsl[8]; uniform bool u_useHsl; uniform bool u_useCurve; uniform bool u_bw;
 const vec3 LUMA = vec3(0.2126,0.7152,0.0722);
 
 vec3 toLin(vec3 c){ return mix(c/12.92, pow((c+0.055)/1.055, vec3(2.4)), step(0.04045, c)); }
@@ -41,6 +41,8 @@ vec3 hsv2rgb(vec3 c){
 void main(){
   vec3 src = texture(u_tex, v_uv).rgb;
   vec3 c = tone(src);
+
+  if(u_bw) c = vec3(dot(c, LUMA));
 
   if(abs(u_clarity) > 0.){
     float rad = 2.0 * max(1./u_texel.x, 1./u_texel.y) / 100.;

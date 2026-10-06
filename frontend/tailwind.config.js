@@ -5,16 +5,16 @@ export default {
     extend: {
       colors: {
         lr: {
-          bg: "#1b1b1b",
-          panel: "#2a2a2a",
-          panel2: "#323232",
-          bar: "#141414",
-          border: "#0f0f0f",
+          bg: "#1e1e1e",
+          panel: "#2b2b2b",
+          panel2: "#353535",
+          bar: "#191919",
+          border: "#121212",
           line: "#3d3d3d",
           text: "#c4c4c4",
           dim: "#8a8a8a",
           hi: "#e8e8e8",
-          accent: "#4fa3ff",
+          accent: "#5aa0e8",
         },
       },
       fontFamily: { sans: ["Inter", "system-ui", "Helvetica", "Arial", "sans-serif"] },

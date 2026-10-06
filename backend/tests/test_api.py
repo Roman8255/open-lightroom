@@ -64,3 +64,27 @@ def test_edit_history_export(user_client, jpeg_bytes):
     assert r.status_code == 200 and r.content[:2] == b"\xff\xd8"
     r = c.post(f"/api/photos/{pid}/export", json={"format": "png"})
     assert r.content[:4] == b"\x89PNG"
+
+
+def test_search_by_filename(user_client, jpeg_bytes):
+    c = user_client
+    c.post("/api/photos", files=[("files", ("holiday_beach.jpg", jpeg_bytes, "image/jpeg")),
+                                 ("files", ("portrait.jpg", jpeg_bytes, "image/jpeg"))])
+    assert [p["filename"] for p in c.get("/api/photos?q=BEACH").json()] == ["holiday_beach.jpg"]
+    assert c.get("/api/photos?q=%25").json() == []  # '%' is escaped, not a wildcard
+
+
+def test_login_accepts_short_legacy_password(client):
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import Session
+
+    from app.core.security import hash_password
+    from app.models import User
+
+    with Session(create_engine(__import__("os").environ["DATABASE_URL"])) as db:
+        db.add(User(email="short@t.io", password_hash=hash_password("tester")))
+        db.commit()
+    login = client.post("/api/auth/login", json={"email": "short@t.io", "password": "tester"})
+    assert login.status_code == 200
+    reg = client.post("/api/auth/register", json={"email": "n@t.io", "password": "short"})
+    assert reg.status_code == 422

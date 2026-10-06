@@ -93,6 +93,9 @@ def render(img: Image.Image, p: EditParams, seed: int = 0) -> Image.Image:
     c = np.clip(c, 0, 1)
     c = np.clip((c - 0.5) * max(0.0, 1 + p.contrast / 100) + 0.5, 0, 1)
 
+    if p.bw:
+        c = np.repeat((c @ LUMA)[..., None], 3, axis=-1)
+
     # clarity: local contrast on luma, midtone-weighted
     if p.clarity:
         blur = np.asarray(

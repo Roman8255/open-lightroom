@@ -104,6 +104,7 @@ export class GLRenderer {
     gl.uniform1f(u("u_sharp"), p.sharpening / 100);
     gl.uniform1f(u("u_vig"), p.vignette / 100);
     gl.uniform1f(u("u_grain"), p.grain / 100);
+    gl.uniform1i(u("u_bw"), p.bw ? 1 : 0);
 
     const hsl = new Float32Array(24);
     let useHsl = false;
