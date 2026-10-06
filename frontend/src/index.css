@@ -1,0 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root { height: 100%; }
+body { @apply bg-lr-bg text-lr-text font-sans text-xs antialiased select-none overflow-hidden; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+input[type="range"].lr-slider { -webkit-appearance: none; appearance: none; height: 14px; background: transparent; width: 100%; }
+input[type="range"].lr-slider::-webkit-slider-runnable-track { height: 2px; background: var(--track, #555); border-radius: 1px; }
+input[type="range"].lr-slider::-moz-range-track { height: 2px; background: var(--track, #555); }
+input[type="range"].lr-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 9px; height: 9px; margin-top: -3.5px; border-radius: 50%; background: #bbb; border: 0; }
+input[type="range"].lr-slider::-moz-range-thumb { width: 9px; height: 9px; border-radius: 50%; background: #bbb; border: 0; }
+input[type="range"].lr-slider:hover::-webkit-slider-thumb { background: #fff; }

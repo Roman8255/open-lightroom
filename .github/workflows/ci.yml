@@ -1,0 +1,35 @@
+name: CI
+on: [push, pull_request]
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      db:
+        image: postgres:16-alpine
+        env: { POSTGRES_USER: openlr, POSTGRES_PASSWORD: openlr, POSTGRES_DB: openlr }
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U openlr" --health-interval 3s --health-retries 20
+    env:
+      DATABASE_URL: postgresql+psycopg://openlr:openlr@localhost:5432/openlr
+      SECRET_KEY: ci-secret-key-ci-secret-key-0123456789
+    defaults: { run: { working-directory: backend } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install ".[dev]"
+      - run: ruff check .
+      - run: alembic upgrade head && alembic downgrade base
+      - run: pytest -q
+  frontend:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: frontend } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm install
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
